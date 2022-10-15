@@ -27,19 +27,26 @@ async fn main() -> Result<()> {
 
         let matches: HashSet<&str> = re.find_iter(&body).map(|m| m.as_str()).collect();
 
+        // we want to save newest images first
+        let mut matches: Vec<&str> = matches.iter().cloned().collect();
+        matches.sort();
+        matches.reverse();
+
+        // connects to the server to get the latest list after 20 images
+        let matches = matches[0..20].to_vec();
+
         for filename in matches {
             let path = Path::new(IMGSAVEDIR).join(filename);
 
             if !path.exists() {
-                println!("downloading file: {filename}");
                 let url = format!("{BASEURL}{filename}");
-                println!("url: {url}");
+                println!("downloading file: {url}");
                 let client = reqwest::Client::builder().build()?;
                 let res = client.get(url).send().await?.bytes().await?;
                 let mut data = res.as_ref();
                 let mut file = File::create(path).await.unwrap();
                 copy(&mut data, &mut file).await.unwrap();
-                sleep(Duration::from_secs(1)).await;
+                sleep(Duration::from_millis(500)).await;
             }
         }
         sleep(Duration::from_secs(60)).await;
